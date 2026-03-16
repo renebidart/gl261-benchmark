@@ -4,9 +4,8 @@ First segmentation benchmark on the GL261 mouse brain ultrasound dataset.
 
 ## Dataset
 
-The GL261 dataset (Dorosti et al., *Scientific Data*, 2025) contains **1,856
-annotated B-mode ultrasound images** from **12 C57BL/6 mice** (7 tumor-bearing,
-5 non-tumor mice), acquired at **30 MHz** with a custom 64-element phased
+The GL261 dataset (Dorosti et al., *Scientific Data*, 2025) contains
+**B-mode ultrasound images** from **12 C57BL/6 mice**, acquired at **30 MHz** with a custom 64-element phased
 array. Five annotators plus two expert reviewers produced consensus ground-truth
 masks. Inter-rater Dice is 0.88--0.90.
 
@@ -43,36 +42,74 @@ All results on the v2.1 validation set (352 images: 246 tumor-positive,
 | Rank | Model | Encoder | Pretraining | T-Dice | O-Dice | FP/106 |
 |-----:|-------|---------|-------------|-------:|-------:|-------:|
 | 1 | UltraSam MMDet (mixed) | ViT-B | US-43d (282K US) | **0.837** | **0.849** | 13 |
-| 2 | SMP UNet | ConvNeXt-V2 Tiny | FCMAE + IN-22k | 0.748 | 0.781 | 15 |
-| 3 | SMP UNet | EfficientNet-B4 | ImageNet-1k | 0.726 | 0.755 | 19 |
-| 4 | USFM FPN | ViT-B | 2M clinical US | 0.668 | 0.703 | 23 |
-| 5 | nnU-Net 2D | From scratch | None | 0.652 | 0.725 | 11 |
-| 6 | SMP UNet | ResNet-34 | ImageNet-1k | 0.628 | 0.666 | 26 |
+| 2 | UltraSam MMDet (default) | ViT-B | US-43d | 0.813 | 0.830 | 14 |
+| 3 | UltraSam UPerNet | ViT-B | US-43d | 0.799 | 0.777 | 29 |
+| 4 | SMP UNet | ConvNeXt-V2 Tiny | FCMAE + IN-22k | 0.748 | 0.781 | 15 |
+| 5 | UltraSam FPN (fine-tuned) | ViT-B | US-43d | 0.742 | 0.558 | 92 |
+| 6 | SMP UNet | EfficientNet-B4 | ImageNet-1k | 0.726 | 0.755 | 19 |
+| 7 | SAMUS (fine-tuned) | ViT-B | US30K (30K US) | 0.720 | 0.506 | 105 \* |
+| 8 | SMP UNet (EMA\*\*) | EfficientNet-B4 | ImageNet-1k | 0.707 | 0.704 | 32 |
+| 9 | USFM FPN | ViT-B | 2M clinical US | 0.668 | 0.703 | 23 |
+| 10 | nnU-Net 2D | From scratch | None | 0.652 | 0.725 | 11 |
+| 11 | SMP UNet | ResNet-34 | ImageNet-1k | 0.628 | 0.666 | 26 |
+| 12 | Sam2Rad (Hiera-L + PPN) | Hiera-L | SA-1B | 0.499 | 0.619 | 11 |
 
 **T-Dice** = Dice averaged over tumor-positive images only (primary metric).
 **O-Dice** = Dice averaged over all images, including tumor-free (TN=1.0, FP=0.0).
 **FP/106** = false positive count on 106 tumor-free images.
 
+\* SAMUS cannot abstain: its prompt generator always produces prompts, even on
+tumor-free images. High T-Dice but unusable standalone due to near-total FP.
+
+\*\* EMA decay 0.9 with corrected checkpoint selection. Rank 6 used EMA decay
+0.999 (always picked final epoch); the higher T-Dice there may reflect luck
+rather than correct selection.
+
 ### Observations
 
-- **Pretrained encoders help.** Two of three ImageNet-pretrained SMP UNets
-  outperform nnU-Net 2D trained from scratch (0.652), though ResNet-34 (0.628) does not.
-- **Dataset mixing.** UltraSam MMDet trained on GL261 + BraTioUS (human
-  brain tumor US) reaches 0.837 T-Dice with 13 FP.
-- **US-specific pretraining is mixed.** UltraSam (282K clinical US) is the best
-  encoder overall, but USFM (2M clinical US, self-supervised) underperforms
-  ImageNet baselines. The 30 MHz preclinical domain gap is one possible
-  explanation, though our tests are too limited to confirm this.
+- **Pretrained encoders help.** ImageNet-pretrained SMP UNets (0.628--0.748)
+  mostly outperform nnU-Net 2D from scratch (0.652).
+- **Decoder capacity matters.** Same UltraSam backbone: FPN (2M) 0.742,
+  UPerNet (10M) 0.799, Mask2Former (40M+) 0.837.
+- **Dataset mixing.** Adding BraTioUS human brain tumor US to training:
+  0.837 vs 0.813 GL261-only. Marginal T-Dice benefit, but multi-dataset
+  approaches are likely the right direction for small datasets.
+- **US-specific pretraining is mixed.** UltraSam (282K clinical US) is the
+  best encoder. USFM (2M clinical US) underperforms ImageNet baselines.
+  Our tests are too limited to draw general conclusions about US pretraining.
+- **Detection and segmentation are partially independent.** Sam2Rad achieves
+  the lowest FP rate (11/106) but poor contours (T-Dice 0.499). Models that
+  cannot abstain (SAMUS, UltraSam FPN) score well on T-Dice but fail on
+  tumor-free images.
 - **Seed variance is large.** ConvNeXt-V2 Tiny across 3 seeds: 0.596, 0.628,
   0.748 (std=0.065). Single-seed rankings should be treated with caution.
+
+## Visual Examples
+
+![Prediction comparison across models](figures/benchmark_comparison.png)
+
+*Same six validation images shown for every model. Columns are selected by
+Dice percentile on the top model: best, 90th, median, 25th percentile, plus
+a tumor-free image that splits models (some hallucinate, others abstain) and
+one where all models correctly predict empty. Green contour = ground truth,
+red overlay = model prediction. Per-image Dice shown in the corner.*
 
 ## Reproducing Other Models
 
 ### UltraSam MMDet (T-Dice=0.837)
 
 Requires [UltraSam](https://github.com/openmedlab/UltraSam) repo + MMDetection.
-Key config: Mask2Former decoder, 1024px, COCO-format annotations. See upstream
-repo for training recipe.
+Key config: Mask2Former decoder, 1024px, COCO-format annotations.
+
+```bash
+pip install -e ".[coco]"     # installs pycocotools
+python prepare_coco.py       # convert to COCO format + RGB
+```
+
+This produces COCO JSON annotations and 3-channel RGB PNGs in
+`data/processed/coco/GL261/`. Point the UltraSam MMDetection config at the
+generated annotation files and image directories. See upstream repo for
+the Mask2Former training recipe.
 
 ### nnU-Net (T-Dice=0.652)
 
@@ -84,6 +121,20 @@ export nnUNet_results="checkpoints/nnunet"
 nnUNetv2_plan_and_preprocess -d 501
 nnUNetv2_train 501 2d 0
 ```
+
+### Sam2Rad (T-Dice=0.499)
+
+Requires [Sam2Rad](https://github.com/aswahd/SamRadiology). Uses a Prompt
+Predictor Network (PPN) on top of a frozen SAM2 Hiera-L encoder. Best
+detection (11/106 FP) but poor contour quality. See upstream repo for
+training details.
+
+### SAMUS (T-Dice=0.720)
+
+Requires [SAMUS](https://github.com/xianlin7/SAMUS). Fine-tuned with
+adapter-only training (8.9M/142.2M params). Note: SAMUS cannot abstain on
+tumor-free images (FP=105/106) and is not usable standalone without an
+external detection gate.
 
 ## Evaluation Protocol
 
