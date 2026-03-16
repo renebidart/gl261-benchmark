@@ -42,28 +42,17 @@ All results on the v2.1 validation set (352 images: 246 tumor-positive,
 | Rank | Model | Encoder | Pretraining | T-Dice | O-Dice | FP/106 |
 |-----:|-------|---------|-------------|-------:|-------:|-------:|
 | 1 | UltraSam MMDet (mixed) | ViT-B | US-43d (282K US) | **0.837** | **0.849** | 13 |
-| 2 | UltraSam MMDet (default) | ViT-B | US-43d | 0.813 | 0.830 | 14 |
-| 3 | UltraSam UPerNet | ViT-B | US-43d | 0.799 | 0.777 | 29 |
-| 4 | SMP UNet | ConvNeXt-V2 Tiny | FCMAE + IN-22k | 0.748 | 0.781 | 15 |
-| 5 | UltraSam FPN (fine-tuned) | ViT-B | US-43d | 0.742 | 0.558 | 92 |
-| 6 | SMP UNet | EfficientNet-B4 | ImageNet-1k | 0.726 | 0.755 | 19 |
-| 7 | SAMUS (fine-tuned) | ViT-B | US30K (30K US) | 0.720 | 0.506 | 105 \* |
-| 8 | SMP UNet (EMA\*\*) | EfficientNet-B4 | ImageNet-1k | 0.707 | 0.704 | 32 |
-| 9 | USFM FPN | ViT-B | 2M clinical US | 0.668 | 0.703 | 23 |
-| 10 | nnU-Net 2D | From scratch | None | 0.652 | 0.725 | 11 |
-| 11 | SMP UNet | ResNet-34 | ImageNet-1k | 0.628 | 0.666 | 26 |
-| 12 | Sam2Rad (Hiera-L + PPN) | Hiera-L | SA-1B | 0.499 | 0.619 | 11 |
+| 2 | UltraSam UPerNet | ViT-B | US-43d | 0.799 | 0.777 | 29 |
+| 3 | SMP UNet | ConvNeXt-V2 Tiny | FCMAE + IN-22k | 0.748 | 0.781 | 15 |
+| 4 | SMP UNet | EfficientNet-B4 | ImageNet-1k | 0.726 | 0.755 | 19 |
+| 5 | USFM FPN | ViT-B | 2M clinical US | 0.668 | 0.703 | 23 |
+| 6 | nnU-Net 2D | From scratch | None | 0.652 | 0.725 | 11 |
+| 7 | SMP UNet | ResNet-34 | ImageNet-1k | 0.628 | 0.666 | 26 |
+| 8 | Sam2Rad (Hiera-L + PPN) | Hiera-L | SA-1B | 0.499 | 0.619 | 11 |
 
 **T-Dice** = Dice averaged over tumor-positive images only (primary metric).
 **O-Dice** = Dice averaged over all images, including tumor-free (TN=1.0, FP=0.0).
 **FP/106** = false positive count on 106 tumor-free images.
-
-\* SAMUS cannot abstain: its prompt generator always produces prompts, even on
-tumor-free images. High T-Dice but unusable standalone due to near-total FP.
-
-\*\* EMA decay 0.9 with corrected checkpoint selection. Rank 6 used EMA decay
-0.999 (always picked final epoch); the higher T-Dice there may reflect luck
-rather than correct selection.
 
 ### Observations
 
