@@ -1,0 +1,6 @@
+{
+  "version": "2.1",
+  "train": ["M01", "M02", "M03", "M05", "M06", "M07", "M08", "M11", "M12"],
+  "val": ["M04", "M09", "M10"],
+  "notes": "M04=tumor_iv, M09=nontumor_iv, M10=tumor_exvivo. Mouse-level split, no image-level leakage."
+}
